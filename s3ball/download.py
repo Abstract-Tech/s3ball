@@ -46,6 +46,9 @@ def download(
         for obj in objects:
             if not obj.is_dir:
                 obj_key = obj.object_name
-                obj_stream = s3_client.get_object(bucket, obj_key)
-
-                _chunked_tar_write(tar, obj_key, obj_stream.stream())
+                try:
+                    obj_stream = s3_client.get_object(bucket, obj_key)
+                    _chunked_tar_write(tar, obj_key, obj_stream.stream())
+                finally:
+                    obj_stream.close()
+                    obj_stream.release_conn()
