@@ -1,4 +1,3 @@
-import io
 import sys
 import tarfile
 
@@ -11,14 +10,6 @@ from s3ball.options import (
     protocol_option,
     secret_key_option,
 )
-
-
-def _chunked_tar_write(tar, name, stream) -> None:
-    for chunk in stream:
-        tarinfo = tarfile.TarInfo(name=name)
-        tarinfo.size = len(chunk)
-
-        tar.addfile(tarinfo, fileobj=io.BytesIO(chunk))
 
 
 @endpoint_option
@@ -46,9 +37,13 @@ def download(
         for obj in objects:
             if not obj.is_dir:
                 obj_key = obj.object_name
+                obj_size = obj.size
+                obj_stream = s3_client.get_object(bucket, obj_key)
+                obj_stream.decode_content = False
                 try:
-                    obj_stream = s3_client.get_object(bucket, obj_key)
-                    _chunked_tar_write(tar, obj_key, obj_stream.stream())
+                    tarinfo = tarfile.TarInfo(name=obj_key)
+                    tarinfo.size = obj_size
+                    tar.addfile(tarinfo, obj_stream)
                 finally:
                     obj_stream.close()
                     obj_stream.release_conn()
